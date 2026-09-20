@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Nut vs. Beak - Twitch Chat Mini-Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <button id="devToggleBtn" title="Toggle dev/simulator mode (persists via localStorage)">dev</button>
+
+  <!-- OBS Browser Source size: 960 x 540 -->
+  <div id="stage">
+    <div id="filmGrain"></div>
+    <div id="scanlines"></div>
+
+    <!-- STATE: IDLE -->
+    <div id="panelIdle" class="panel active">
+      <div id="idlePrompt">
+        <h1 class="logo"><span class="logo-nut">NUT</span> <span class="logo-vs">vs.</span> <span class="logo-beak">BEAK</span></h1>
+        <div class="tagline">A very serious artillery war over one bird feeder</div>
+        <div class="idle-icons"><span>🐿️</span><span>💥</span><span>🐦</span></div>
+        <div class="cta">Type <span class="hl">!join squirrels</span> or <span class="hl">!join birds</span></div>
+      </div>
+      <!-- Attract mode: the backstory rotates in between the logo screens (see startIdleCycle in twitch.js). -->
+      <div id="storyCard">
+        <div class="story-label">THE BACKSTORY</div>
+        <div id="storyText"></div>
+        <div id="storyChapter"></div>
+      </div>
+      <div id="statsCard">
+        <h2 id="statsCardName">Player Stats</h2>
+        <div id="statsCardBody"></div>
+      </div>
+    </div>
+
+    <!-- STATE: INTRO (commanding officers, shown once before the battle) -->
+    <div id="panelIntro" class="panel">
+      <h1 class="panel-title">TONIGHT'S COMMANDING OFFICERS</h1>
+      <div id="introCards">
+        <div class="officer-card squirrels">
+          <div class="officer-label">SQUIRREL HIGH COMMAND</div>
+          <div class="officer-portrait">🐿️<span class="medal">🎖️</span></div>
+          <div class="officer-rank" id="offSqRank"></div>
+          <div class="officer-name" id="offSqName"></div>
+          <div class="officer-quote" id="offSqQuote"></div>
+        </div>
+        <div class="intro-vs">VS</div>
+        <div class="officer-card birds">
+          <div class="officer-label">AVIAN AIR COMMAND</div>
+          <div class="officer-portrait">🐦<span class="medal">🎖️</span></div>
+          <div class="officer-rank" id="offBirdRank"></div>
+          <div class="officer-name" id="offBirdName"></div>
+          <div class="officer-quote" id="offBirdQuote"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATE: LOBBY -->
+    <div id="panelLobby" class="panel">
+      <h1 class="panel-title">MUSTERING THE TROOPS</h1>
+      <div id="lobbyTimer">60</div>
+      <div id="lobbyHint">
+        <span class="hl">!join squirrels</span> &nbsp;or&nbsp; <span class="hl">!join birds</span>
+        &nbsp;&middot;&nbsp; mods: <span class="hl">!start</span>
+      </div>
+      <div id="lobbyColumns">
+        <div class="team-col squirrels">
+          <h2>🐿️ SQUIRRELS <span id="sqCount">0</span>/4</h2>
+          <ul id="listSquirrels"></ul>
+        </div>
+        <div class="team-col birds">
+          <h2>🐦 BIRDS <span id="birdCount">0</span>/4</h2>
+          <ul id="listBirds"></ul>
+        </div>
+      </div>
+      <div id="toast"></div>
+    </div>
+
+    <!-- STATE: BATTLE (canvas is drawn by game.js) -->
+    <div id="panelBattle" class="panel">
+      <canvas id="gameCanvas" width="960" height="540"></canvas>
+
+      <div id="hud">
+        <div id="hudTop">
+          <div id="hudTurn">GET READY</div>
+          <div id="hudTimer">--</div>
+          <div id="hudWind">WIND 0</div>
+        </div>
+        <div id="hudBottom">
+          <span id="hudWeapon">WEAPON: BAZOOKA</span>
+          <span id="hudAim">AIM: 45</span>
+          <span id="hudPower">POWER: 50</span>
+        </div>
+        <div id="weaponPoll">
+          <div id="weaponPollHead">TYPE A WEAPON!</div>
+          <div id="weaponPollFor"></div>
+          <div id="weaponPollTimer">8</div>
+          <ul id="weaponPollList"></ul>
+        </div>
+        <div id="battleBanner"></div>
+      </div>
+    </div>
+
+    <!-- STATE: MEMORIAM (epitaph cards, human players only) -->
+    <div id="panelMemoriam" class="panel">
+      <h1 class="panel-title" id="memoriamHeading">FIELD REPORTS</h1>
+      <div id="epitaphGrid"></div>
+    </div>
+
+    <!-- STATE: RESULTS -->
+    <div id="panelResults" class="panel">
+      <div id="resultsBox">
+        <div id="resultsIcon">🏆</div>
+        <h1 id="resultsTitle">VICTORY</h1>
+        <div id="resultsSub"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEV / SIMULATOR PANEL -->
+  <div id="devPanel">
+    <h3>NUT vs BEAK DEV CONSOLE</h3>
+    <div class="small">Live Twitch chat is <span id="devChatStatus">OFF</span>. Channel: <span id="devChannel" class="hl"></span><br>Set it with <code>?username=Channel</code> in the URL.</div>
+
+    <label>Username</label>
+    <input type="text" id="devUsername" value="TestUser">
+    <label>Message</label>
+    <input type="text" id="devMessage" value="!join squirrels" onkeydown="if(event.key==='Enter')devSendChat();">
+    <label><input type="checkbox" id="devBroadcasterFlag"> Send as broadcaster/mod</label>
+
+    <div class="dev-buttons">
+      <button onclick="devSendChat()">Send Chat</button>
+      <button onclick="devQuickJoin('squirrels')">Join Squirrels</button>
+      <button onclick="devQuickJoin('birds')">Join Birds</button>
+      <button onclick="devFloodJoins(6)">Flood 6 Joins</button>
+      <button onclick="devStart()">!start (mod)</button>
+      <button onclick="devVoteWeapon()">Vote Weapon (random option)</button>
+      <button onclick="devSkipIntro()">Skip Intro</button>
+      <button onclick="devDropCrate()">Drop Supply Crate</button>
+      <button onclick="devSimulateGameOver()">Simulate Game Over</button>
+      <button id="devAutoBtn" onclick="devToggleAutoPlay()">Auto-Play Match</button>
+      <button onclick="devSendStats()">!stats</button>
+      <button onclick="devSendReset()">!reset</button>
+    </div>
+    <div id="devLog"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/comfy.js@latest/dist/comfy.min.js"></script>
+  <script src="twitch.js"></script>
+  <script src="physics.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
