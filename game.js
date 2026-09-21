@@ -111,16 +111,8 @@ const Game = (() => {
     if (!b) return;
     b.textContent = text; b.classList.remove("show"); void b.offsetWidth; b.classList.add("show");
   }
-  let ac = null;
-  function chirp(f = 1800) {
-    try {
-      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
-      const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime;
-      o.frequency.setValueAtTime(f, t); o.frequency.exponentialRampToValueAtTime(f * 1.7, t + 0.15);
-      g.gain.setValueAtTime(0.05, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
-      o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + 0.35);
-    } catch (e) { /* audio is optional */ }
-  }
+  const sfx = (name, arg) => { if (window.Sfx) Sfx.play(name, arg); };   // all audio lives in sfx.js
+  const chirp = f => sfx("chirp", f);
 
   /* ---------------------------------------------------------------------
    * START / STOP
@@ -139,7 +131,7 @@ const Game = (() => {
     bg = new Image(); bg.src = pick(BACKDROPS);                // optional; falls back to the sky gradient if missing
     running = true; last = performance.now(); acc = 0;
     cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
-    banner("BATTLE START!");
+    banner("BATTLE START!"); sfx("horn");
     later(120, nextTurn);
   }
 
@@ -173,6 +165,7 @@ const Game = (() => {
     if (!u.alive || amt <= 0) return;
     const real = Math.min(u.hp, amt);
     u.hp -= amt;
+    if (amt > 4) sfx("hurt");
     if (by && by !== u && by.side !== u.side) by.damageDealt += real;
     u.lastHit = { by, w: wkey, t: frame };
     if (u.hp <= 0) kill(u, null);
@@ -181,6 +174,7 @@ const Game = (() => {
   function kill(u, kind) {
     if (!u.alive) return;
     u.alive = false; u.hp = 0; u.hidden = false;
+    sfx("death");
     const lh = u.lastHit, recent = lh && frame - lh.t < 600;
     let cause;
     if (kind === "water") cause = recent && lh.by && lh.by !== u ? `Knocked into the abyss by ${lh.by.name}` : "Fell into the abyss";
@@ -249,6 +243,7 @@ const Game = (() => {
   }
 
   function splash(x, y) {
+    sfx("splash");
     for (let i = 0; i < 7; i++) particles.push({ x, y, vx: rnd(-1.5, 1.5), vy: rnd(-4, -1.5), life: 30, max: 30, emoji: "💧", size: 12, grav: 0.2 });
   }
 
@@ -257,6 +252,7 @@ const Game = (() => {
    * ------------------------------------------------------------------- */
   function explode(x, y, r, dmg, owner, wkey, opt = {}) {
     if (!opt.noCarve) Physics.carve(x, y, r);
+    sfx("explosion", r);
     fx.push({ t: "ring", x, y, r, life: 18, max: 18 });
     particles.push({ x, y, vx: 0, vy: 0, life: 20, max: 20, emoji: "💥", size: Math.max(20, r * 1.3), grav: 0 });
     for (let i = 0; i < Math.min(10, r / 5); i++) particles.push({ x, y, vx: rnd(-3, 3), vy: rnd(-4, 0), life: 26, max: 26, color: pick(["#ffb300", "#ff6d00", "#5d4037"]), size: rnd(2, 5), grav: 0.15 });
@@ -325,10 +321,11 @@ const Game = (() => {
         const n = Physics.normal(p.x, p.y), dot = p.vx * n.x + p.vy * n.y, b = d.bounce != null ? d.bounce : 0.5;
         if (dot < 0) { p.vx = (p.vx - 2 * dot * n.x) * b; p.vy = (p.vy - 2 * dot * n.y) * b; p.vx *= 0.92; }
         p.bounces++;
+        if (Math.hypot(p.vx, p.vy) > 1.8 && !d.crush) sfx("bounce");
         if (d.crush) { crushHit(p); if (p.bounces > 6) { p.dead = true; return; } }
         if (Math.hypot(p.vx, p.vy) < 1.2 && n.y < -0.5 && !d.crush) {
           p.vx = p.vy = 0; p.settled = true;
-          if (d.settleFuse && p.fuse == null) { p.fuse = d.settleFuse; if (d.ray) chirp(1500); }
+          if (d.settleFuse && p.fuse == null) { p.fuse = d.settleFuse; if (d.ray) sfx("choir"); }
         }
         break;
       } else { p.x = nx; p.y = ny; }
@@ -340,7 +337,7 @@ const Game = (() => {
   function crushHit(p) {                                    // Garden Gnome: indestructible, carves + flattens what it lands on
     if (p.lastCrush && frame - p.lastCrush < 20) return;   // don't re-hit every pixel of the same landing
     p.lastCrush = frame;
-    Physics.carve(p.x, p.y + 8, 30); shake = 8;
+    Physics.carve(p.x, p.y + 8, 30); shake = 8; sfx("bong");
     units.forEach(u => {
       if (!u.alive || Math.hypot(u.x - p.x, u.y - p.y) > 34) return;
       hurt(u, 40, p.owner, p.w); u.vx += Math.sign(p.vx || 1) * 4; u.vy += 5; u.walk = null;
@@ -352,7 +349,7 @@ const Game = (() => {
     if (p.dead) return; p.dead = true;
     const d = p.d;
     explode(p.x, p.y, d.r, d.dmg, p.owner, p.w);
-    if (d.ray) fx.push({ t: "ray", x: p.x, y: p.y, life: 45, max: 45 });
+    if (d.ray) { fx.push({ t: "ray", x: p.x, y: p.y, life: 45, max: 45 }); chirp(2200); }
     if (d.gas) spawnGas(p.x, p.y, d.gas, p.owner, p.w);
     if (d.split) {
       const s = d.split;
@@ -423,7 +420,7 @@ const Game = (() => {
   function dropCrate(type, x) {
     type = type || (Math.random() < 0.5 ? "health" : "weapon");
     crates.push({ x: x != null ? x : rnd(70, W - 70), y: -30, vy: 0, type, gift: type === "weapon" ? pick(CRATE_WEAPONS) : null, landed: false, chuted: true, age: 0, dead: false });
-    banner("📦 SUPPLY CRATE INBOUND!");
+    banner("📦 SUPPLY CRATE INBOUND!"); sfx("crateDrop");
   }
 
   function updateCrate(c) {
@@ -443,11 +440,11 @@ const Game = (() => {
     c.dead = true;
     if (c.type === "health") {
       const before = u.hp; u.hp = Math.min(MAX_HP, u.hp + CRATE_HEAL);
-      banner(`${u.name} found a medkit! +${Math.round(u.hp - before)} HP`);
+      banner(`${u.name} found a medkit! +${Math.round(u.hp - before)} HP`); sfx("heal");
       for (let i = 0; i < 6; i++) particles.push({ x: u.x + rnd(-10, 10), y: u.y - 10, vx: rnd(-0.5, 0.5), vy: rnd(-2, -0.8), life: 45, max: 45, emoji: "❤️", size: 14, grav: 0 });
     } else {
       u.gift = c.gift;
-      banner(`${u.name} found the ${WEAPONS[c.gift].emoji} ${WEAPONS[c.gift].name}!`);
+      banner(`${u.name} found the ${WEAPONS[c.gift].emoji} ${WEAPONS[c.gift].name}!`); sfx("pickup");
       for (let i = 0; i < 6; i++) particles.push({ x: u.x + rnd(-10, 10), y: u.y - 10, vx: rnd(-0.5, 0.5), vy: rnd(-2, -0.8), life: 45, max: 45, emoji: "⭐", size: 14, grav: 0 });
     }
   }
@@ -483,7 +480,7 @@ const Game = (() => {
     const foe = nearestEnemy(u, u.x, u.y);
     u.facing = foe ? Math.sign(foe.x - u.x) || 1 : 1;
     turn = { unit: u, controller: MANUAL_CONTROL && !u.isBot ? u.name.toLowerCase() : null, phase: "aim", frames: TURN_FRAMES, weapon: "acorn", forced: null, vote: null, aim: u.facing > 0 ? 45 : 135, power: 50, target: 50, moveLeft: MOVE_BUDGET, used: {}, acted: false, auto: false, armed: false, think: TURN_INTRO_FRAMES, settle: 0, guard: 0, wings: 90 };
-    banner(`${ICON[u.side]} ${u.name}'s turn`);
+    banner(`${ICON[u.side]} ${u.name}'s turn`); sfx("turn");
     if (u.gift) {                                              // crate weapon replaces this turn's pick (and skips the vote)
       turn.forced = u.gift; u.gift = null;
       banner(`${ICON[u.side]} ${u.name} - CRATE WEAPON: ${WEAPONS[turn.forced].emoji} ${WEAPONS[turn.forced].name.toUpperCase()}!`);
@@ -496,7 +493,7 @@ const Game = (() => {
     keys.sort(() => Math.random() - 0.5);
     turn.vote = { options: keys.slice(0, 3), votes: {}, frames: VOTE_SECONDS * 60 };
     turn.phase = "vote";
-    banner(`TYPE A WEAPON FOR ${turn.unit.name.toUpperCase()}!`);
+    banner(`TYPE A WEAPON FOR ${turn.unit.name.toUpperCase()}!`); sfx("voteOpen");
   }
   function tallyVote() {
     const v = turn.vote, counts = {};
@@ -505,7 +502,7 @@ const Game = (() => {
     const top = Math.max(...Object.values(counts));
     const winner = pick(v.options.filter(o => counts[o] === top));   // ties (and no votes at all) are random
     turn.forced = winner; turn.phase = "aim"; turn.think = READ_DELAY_FRAMES + 30;   // let "CHAT PICKED ..." be read
-    banner(`CHAT PICKED ${WEAPONS[winner].emoji} ${WEAPONS[winner].name.toUpperCase()}!`);
+    banner(`CHAT PICKED ${WEAPONS[winner].emoji} ${WEAPONS[winner].name.toUpperCase()}!`); sfx("voteDone");
   }
 
   function isBusy() {
@@ -520,7 +517,7 @@ const Game = (() => {
     if (sq && bd) return false;
     finishing = true; turn = null;
     const winner = sq ? "squirrels" : bd ? "birds" : null;
-    banner(winner ? `${winner.toUpperCase()} WIN!` : "MUTUAL DESTRUCTION!");
+    banner(winner ? `${winner.toUpperCase()} WIN!` : "MUTUAL DESTRUCTION!"); sfx("fanfare");
     units.forEach(u => { u.damageDealt = Math.round(u.damageDealt); });
     setTimeout(() => { running = false; if (api) api.endMatch({ winner, units }); }, 2800);
     return true;
@@ -557,7 +554,11 @@ const Game = (() => {
     if (checkWin()) return;
 
     if (turn.phase === "vote") {
-      if (!turn.unit.alive) turn.phase = "resolve"; else if (--turn.vote.frames <= 0) tallyVote();
+      if (!turn.unit.alive) turn.phase = "resolve";
+      else {
+        if (turn.vote.frames <= 180 && turn.vote.frames % 60 === 0) sfx("tick");     // last 3 seconds tick down
+        if (--turn.vote.frames <= 0) tallyVote();
+      }
     } else if (turn.phase === "aim") {
       if (!turn.unit.alive) turn.phase = "resolve";
       else {
@@ -592,15 +593,16 @@ const Game = (() => {
     const spd = turn.power * 0.16, mx = u.x + dx * (R + 6), my = u.y + dy * (R + 6) - 2;
     const tx = turn.target / 100 * W;
     switch (wd.kind) {
-      case "proj": spawnProj(mx, my, dx * spd, dy * spd, wd.p, u, key); return true;
-      case "drop": spawnProj(u.x, u.y + R - 6, 0, 0, wd.p, u, key); return true;
-      case "mine": spawnProj(u.x + u.facing * (R + 8), u.y, u.facing * 1.5, -1, wd.p, u, key); banner("Sap trap set!"); return true;
+      case "proj": sfx("launch"); spawnProj(mx, my, dx * spd, dy * spd, wd.p, u, key); return true;
+      case "drop": sfx("plop"); spawnProj(u.x, u.y + R - 6, 0, 0, wd.p, u, key); return true;
+      case "mine": sfx("plop"); spawnProj(u.x + u.facing * (R + 8), u.y, u.facing * 1.5, -1, wd.p, u, key); banner("Sap trap set!"); return true;
       case "spit":
-        [-2.5, 2.5].forEach((off, i) => later(i * 8, () => { const aa = (turn.aim + off) * Math.PI / 180; spawnProj(mx, my, Math.cos(aa) * spd * 1.3, -Math.sin(aa) * spd * 1.3, wd.p, u, key); }));
+        [-2.5, 2.5].forEach((off, i) => later(i * 8, () => { sfx("spit"); const aa = (turn.aim + off) * Math.PI / 180; spawnProj(mx, my, Math.cos(aa) * spd * 1.3, -Math.sin(aa) * spd * 1.3, wd.p, u, key); }));
         return true;
       case "peck":
         for (let i = 0; i < 12; i++) later(i * 4, () => {
           if (!u.alive) return;
+          sfx("peck");
           const aa = (turn.aim + rnd(-4, 4)) * Math.PI / 180;
           spawnProj(u.x + Math.cos(aa) * (R + 6), u.y - Math.sin(aa) * (R + 6), Math.cos(aa) * 14, -Math.sin(aa) * 14, wd.p, u, key);
           u.vx -= dx * 0.9; u.vy -= 0.2;                     // severe recoil
@@ -618,12 +620,14 @@ const Game = (() => {
         return true;
       }
       case "dive": {
+        sfx("dive");
         u.hidden = true;
         spawnProj(u.x, u.y, dx * 9, dy * 9, { dive: true }, u, key, { dist: 0 });
         banner("KAMIKAZE!");
         return true;
       }
       case "spray":
+        sfx("hiss");
         for (let i = 0; i < 45; i++) later(i, () => { if (u.alive) spawnGas(mx, my, { n: 1, vx: dx * spd * 0.45, vy: dy * spd * 0.45, life: 45, dmg: 0.55, rad: 10, wind: 2.2 }, u, key); });
         return true;
       case "air": return doAir(u, key, tx);
@@ -651,6 +655,7 @@ const Game = (() => {
     const reach = wd.mode === "halve" ? 40 : 50;
     const targets = units.filter(t => t.alive && t !== u && Math.hypot(t.x - u.x, t.y - u.y) < reach && (t.x - u.x) * u.facing > -6);
     fx.push({ t: "sprite", emoji: wd.emoji, x: u.x + u.facing * 22, y: u.y - 4, vx: u.facing * 1.5, vy: 0, life: 16, max: 16 });
+    sfx("whack");
     if (!targets.length) { banner("WHIFF!"); return true; }
     if (wd.mode === "halve") {
       const t = targets.sort((p, q) => Math.hypot(p.x - u.x, p.y - u.y) - Math.hypot(q.x - u.x, q.y - u.y))[0];
@@ -665,9 +670,11 @@ const Game = (() => {
 
   function doAir(u, key, tx) {
     if (key === "crows") {
+      [0, 14, 30].forEach(d => later(d, () => sfx("caw")));
       for (let i = 0; i < 3; i++) fx.push({ t: "sprite", emoji: "🐦‍⬛", x: -40 - i * 40, y: 30 + i * 18, vx: (tx + 200) / 70, vy: 0, life: 110, max: 110 });
       for (let i = 0; i < 8; i++) later(20 + i * 8, () => spawnProj(tx + rnd(-90, 90), -20, rnd(-0.3, 0.3), 2, { emoji: "💩", size: 0.6, r: 28, dmg: 25, impact: true, grav: 0.6 }, u, key));
     } else if (key === "skunk") {
+      sfx("hiss");
       for (let i = 0; i < 12; i++) later(i * 5, () => spawnGas(tx - 110 + i * 20, -10, { n: 2, vx: 0, vy: 1, life: 240, dmg: 0.35, rad: 20, fall: true, wind: 0.3 }, u, key));
       banner("PEE-YEW!");
     } else if (key === "gophers") {
@@ -681,7 +688,7 @@ const Game = (() => {
         update() {
           this.t++;
           if (this.phase === "walk") { this.x += (tx + 80) / 150; this.y = 50 + Math.sin(this.t * 0.25) * 6; if (this.t >= 150) this.phase = "stomp"; }
-          else { this.y += 14; const sy = Physics.surfaceY(tx, 0); if (this.y >= (sy != null ? sy : H) - 10) { explode(tx, this.y, 85, 75, u, key); this.done = true; } }
+          else { this.y += 14; const sy = Physics.surfaceY(tx, 0); if (this.y >= (sy != null ? sy : H) - 10) { sfx("stomp"); explode(tx, this.y, 85, 75, u, key); this.done = true; } }
         },
         draw() { emojiAt("🥾", this.x, this.y, 60, false); } };
       scripted.push(b);
@@ -691,10 +698,10 @@ const Game = (() => {
 
   function doSpecial(u, key, dx) {
     if (key === "mower") {
-      banner("MOWER MAYHEM!"); shake = 10;
+      banner("MOWER MAYHEM!"); shake = 10; sfx("mower");
       for (let i = 0; i < 26; i++) later(i * 7, () => spawnProj(rnd(20, W - 20), -20, rnd(-0.6, 0.6), 3, { emoji: pick(["🌿", "⚙️"]), size: 0.7, r: 30, dmg: 20, impact: true, grav: 0.5 }, u, key));
     } else if (key === "blower") {
-      const dir = dx >= 0 ? 1 : -1; shake = 12; banner("WHOOOSH!");
+      const dir = dx >= 0 ? 1 : -1; shake = 12; banner("WHOOOSH!"); sfx("whoosh");
       wind = clamp(wind + dir * 6, -10, 10);
       units.forEach(t => { if (t.alive) { t.vx += dir * rnd(3, 6); t.vy -= rnd(2, 4); t.walk = null; t.lastHit = t !== u ? { by: u, w: key, t: frame } : t.lastHit; } });
       mines.forEach(m => { m.vx += dir * 4; m.vy -= 3; });
@@ -702,7 +709,7 @@ const Game = (() => {
     } else if (key === "sprinklers") {
       waterY = Math.max(H - 220, waterY - 55);
       units.forEach(t => { if (t.alive) t.soggy = 3; });
-      banner("SPRINKLERS ON! SOGGY!");
+      banner("SPRINKLERS ON! SOGGY!"); sfx("sprinkle");
       for (let i = 0; i < 30; i++) particles.push({ x: rnd(0, W), y: -10, vx: 0, vy: rnd(3, 6), life: 90, max: 90, emoji: "💧", size: 12, grav: 0 });
     } else if (key === "playdead") {
       banner(`${u.name} plays dead...`);

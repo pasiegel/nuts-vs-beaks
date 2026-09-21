@@ -154,5 +154,6 @@ h1 { font-size: var(--fs-xl); } h2 { font-size: var(--fs-md); }
 #devPanel input[type=text] { width: 100%; box-sizing: border-box; padding: 3px; font-family: monospace; }
 #devPanel button { margin: 3px 3px 3px 0; padding: 4px 7px; cursor: pointer; }
 #devLog { margin-top: 8px; max-height: 110px; overflow-y: auto; font-size: 12px; color: #ff9a9a; }
-#devToggleBtn { position: fixed; top: 4px; left: 4px; z-index: 999; font-size: 9px; opacity: .35; background: #000; color: #fff; border: 1px solid #555; padding: 2px 5px; cursor: pointer; }
+#devToggleBtn { display: none; position: fixed; top: 4px; left: 4px; z-index: 999; font-size: 9px; opacity: .35; background: #000; color: #fff; border: 1px solid #555; padding: 2px 5px; cursor: pointer; }
+#devToggleBtn.show { display: block; }   /* only shown in dev mode (?dev=1 or toggled on), never on a live stream */
 #devToggleBtn:hover { opacity: 1; }

@@ -186,6 +186,7 @@ function handleJoin(user, side) {
   if (lobby[side].length >= UNITS_PER_SIDE) { toast(`${SIDES[side].label} are full - try the other side!`); return; }
 
   lobby[side].push({ name: user });
+  Sfx.play("join");
   renderLobby(user);
 }
 
@@ -251,6 +252,7 @@ function showIntro() {
   el("offBirdName").textContent = c.birds.name;
   el("offBirdQuote").textContent = `“${c.birds.quote}”`;
   setState("INTRO");
+  Sfx.play("sting");
   clearTimeout(phaseTimeoutHandle);
   phaseTimeoutHandle = setTimeout(beginBattle, INTRO_MS);
 }
@@ -405,6 +407,10 @@ function devFloodJoins(n) {
   }
 }
 function devStart() { onChatCommand("DevMod", "!start", { broadcaster: true, mod: true }); devLog("DevMod: !start [mod]"); }
+function devToggleSound() { el("devSoundBtn").textContent = Sfx.toggle() ? "Sound: OFF" : "Sound: ON"; }
+function devSoundTest() {                                   // plays every sound in sequence so you can audition them
+  Sfx.names.forEach((n, i) => setTimeout(() => { devLog(`sound: ${n}`); Sfx.play(n, 60); }, i * 700));
+}
 function devDropCrate() { if (state === "BATTLE" && window.Game) Game.dropCrate(); else devLog("Start a battle first."); }
 function devSkipIntro() { if (state === "INTRO") beginBattle(); else devLog("Not in the intro."); }
 function devBattleCmd(text) { el("devMessage").value = text; devSendChat(); }
@@ -509,7 +515,9 @@ el("devToggleBtn").addEventListener("click", () => {
   loadStats();
   enterIdle();
   el("devChannel").textContent = CHANNEL_NAME + (CHANNEL_FROM_URL ? "" : " (default)");
+  el("devSoundBtn").textContent = Sfx.isMuted() ? "Sound: OFF" : "Sound: ON";
   if (DEV_MODE) {
+    el("devToggleBtn").classList.add("show");
     el("devPanel").classList.add("show");
     const btn = document.createElement("button");
     btn.textContent = "Connect to Twitch";

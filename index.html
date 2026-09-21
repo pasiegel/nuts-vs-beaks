@@ -140,6 +140,8 @@
       <button onclick="devVoteWeapon()">Vote Weapon (random option)</button>
       <button onclick="devSkipIntro()">Skip Intro</button>
       <button onclick="devDropCrate()">Drop Supply Crate</button>
+      <button id="devSoundBtn" onclick="devToggleSound()">Sound: ON</button>
+      <button onclick="devSoundTest()">Sound Test</button>
       <button onclick="devSimulateGameOver()">Simulate Game Over</button>
       <button id="devAutoBtn" onclick="devToggleAutoPlay()">Auto-Play Match</button>
       <button onclick="devSendStats()">!stats</button>
@@ -149,6 +151,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/comfy.js@latest/dist/comfy.min.js"></script>
+  <script src="sfx.js"></script>
   <script src="twitch.js"></script>
   <script src="physics.js"></script>
   <script src="game.js"></script>

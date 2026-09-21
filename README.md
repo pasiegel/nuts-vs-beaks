@@ -18,6 +18,7 @@ It plays out like a Twitch "spectator" game: chat joins, then **watches it play 
 * **Commanding officers.** Each side gets a randomly drawn commander with a MacArthur/Twain-style quote before the fight.
 * **Attract mode.** The idle screen tells the (deeply serious) backstory of why everyone is fighting over the bird feeder.
 * **Epitaph cards** for every human player: faction, damage dealt, enemies defeated, cause of death (or "Survived!").
+* **Sound effects.** 31 synthesized sounds (explosions, launches, bounces, crows cawing, the Golden Walnut choir, vote ticks, fanfares...) - generated live, so no audio files. Mute with `?mute=1`.
 * **Sudden death.** After turn 20 the water starts rising so a match always finishes.
 
 ## 1. Setup & OBS Integration
@@ -31,6 +32,8 @@ It plays out like a Twitch "spectator" game: chat joins, then **watches it play 
 5. That's it - no server, no config file, no chroma key.
 
 > If you forget `?username=`, the game quietly falls back to a default channel name (shown in the dev panel as "default"), so double-check the URL before going live. A leading `@` or `#` in the name is stripped for you.
+>
+> **Sound:** add `&mute=1` to the URL to silence the game (handy if you'd rather run your own music). OBS browser sources play audio automatically; in a normal browser tab, click the page once so the browser allows sound. In OBS, tick **Control audio via OBS** on the Browser Source to get a mixer slider for it.
 >
 > Stats live in the browser source's local storage, so clearing OBS's browser cache also clears the all-time stats.
 
@@ -150,7 +153,7 @@ Test everything without a live Twitch connection: open the game with `?dev=1` (a
 A console appears to the right of the game with:
 
 * a mock chat box (username, message, "send as broadcaster/mod"),
-* one-click buttons: join squirrels/birds, flood 6 random joins, `!start`, vote for a weapon, skip the commander intro, drop a supply crate, simulate game over, `!stats`, `!reset`,
+* one-click buttons: join squirrels/birds, flood 6 random joins, `!start`, vote for a weapon, skip the commander intro, drop a supply crate, simulate game over, `!stats`, `!reset`, a **Sound** on/off toggle, and a **Sound Test** that plays every effect in turn,
 * **Auto-Play Match** - fake chatters fill the lobby, start the match, vote in weapon polls and loop match after match hands-free (great for soak-testing an overlay),
 * **Connect to Twitch** - test against real chat while keeping the simulator visible.
 
@@ -181,6 +184,7 @@ In `twitch.js`: `LOBBY_SECONDS`, `INTRO_MS`, the `OFFICERS` list (add your own c
 | `index.html` | The page: panels for idle, lobby, intro, battle, epitaph cards and results, plus the dev console. |
 | `styles.css` | All styling (VHS grain, cork-board epitaph cards, commander cards, HUD). |
 | `twitch.js` | ComfyJS setup, chat parsing, lobby/state machine, commanders, attract mode, stats, epitaph cards, dev tools. |
+| `sfx.js` | Synthesized sound effects (Web Audio) and the mute control. To add a sound, add an entry to `SOUNDS` and call `Sfx.play("name")`. |
 | `physics.js` | Destructible terrain (canvas + collision mask), raycasts, surface normals. |
 | `game.js` | Turn loop, rendering, the weapon registry, bot AI, crates, weapon votes. |
 | `gen_backdrops.py` | Generates the backdrop images into `img/`. |
