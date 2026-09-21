@@ -2,6 +2,12 @@
 
 ![Nut vs. Beak splash screen](screenshots/splash.png)
 
+### 🎮 [Play it live: pasiegel.github.io/nuts-vs-beaks](https://pasiegel.github.io/nuts-vs-beaks/)
+
+To use it on your own stream, add your channel to the end of that link - `https://pasiegel.github.io/nuts-vs-beaks/?username=YourChannel` - and use it as an OBS Browser Source (960 x 540). Full steps are in [Setup](#1-setup--obs-integration).
+
+---
+
 A zero-setup OBS Browser Source mini-game that parodies *Worms*. Viewers join **Squirrels** or **Birds** by typing a command in chat, bots fill out the teams, and the two armies fight over one bird feeder on destructible terrain with a ridiculous arsenal - Golden Walnuts, Angry Homeowners, Lawn Mowers and more. The last faction standing wins, and every human player gets an **epitaph card** with their stats and a humorous cause of death.
 
 It plays out like a Twitch "spectator" game: chat joins, then **watches it play out by RNG and animation**, stepping in only when the game asks them to **type a weapon** for the next shot.
@@ -24,10 +30,10 @@ It plays out like a Twitch "spectator" game: chat joins, then **watches it play 
 ## 1. Setup & OBS Integration
 
 1. In OBS, add a **Browser Source**.
-2. Point it at `index.html` - either tick **Local file**, or paste your GitHub Pages link.
+2. Point it at the **hosted game** (easiest: no download needed), or at a local copy of `index.html` with **Local file** ticked.
 3. **Add your channel to the end of the address** with `?username=`:
+   * *Hosted (recommended):* `https://pasiegel.github.io/nuts-vs-beaks/?username=YourChannel`
    * *Local example:* `file:///H:/PycharmProjects/Nut-vs-Beak/index.html?username=YourChannel`
-   * *GitHub Pages example:* `https://YOUR-GITHUB-NAME.github.io/Nut-vs-Beak/?username=YourChannel`
 4. Set the source size to **960 x 540**.
 5. That's it - no server, no config file, no chroma key.
 
@@ -37,11 +43,13 @@ It plays out like a Twitch "spectator" game: chat joins, then **watches it play 
 >
 > Stats live in the browser source's local storage, so clearing OBS's browser cache also clears the all-time stats.
 
-### Hosting on GitHub Pages
+### Hosting your own copy on GitHub Pages
+
+The official copy is hosted at **https://pasiegel.github.io/nuts-vs-beaks/**. To host your own fork:
 
 1. Push this folder to a GitHub repository.
 2. **Settings -> Pages -> Build and deployment**: choose **Deploy from a branch**, select `main` and `/ (root)`.
-3. After a minute your game is live at `https://YOUR-GITHUB-NAME.github.io/REPO-NAME/`. Use that URL (plus `?username=...`) as the OBS Browser Source.
+3. After a minute your game is live at `https://YOUR-GITHUB-NAME.github.io/YOUR-REPO-NAME/`. Use that URL (plus `?username=...`) as the OBS Browser Source.
 
 The game needs internet for two small CDN files (the pixel font and ComfyJS, which reads Twitch chat).
 
